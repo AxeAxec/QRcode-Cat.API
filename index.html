@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload Cat QR Code</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+    <div class="top-container"> 
+        <div class="top-buttons">
+            <button class="button" onclick="fetchBreeds()">Load</button>
+            <button class="button" onclick="downloadAllQRCodes()">Download</button>
+            <button class="button" style="background-color: red;" onclick="deleteAllQRCodes()">Delete All</button>
+        </div>
+        <div class="search-container"> 
+            <input type="text" id="searchInput" placeholder="Search breed...">
+            <button class="button" onclick="searchQRCode()">Search</button>
+        </div>
+    </div>
+
+    <div class="upload-form" id="uploadForm"> 
+        <h2>Select Cat Breed</h2>
+        <select id="breedSelect">
+            <option value="">Loading breeds...</option>
+        </select>
+        <button onclick="generateQRCode()">Generate QR Code</button>
+        <button class="button" onclick="generateAllQRCodes()">Get All</button>
+    </div>
+
+    <div class="qr-display" id="qrDisplay"></div> 
+
+    <script>
+        const API_URL = "https://api.thecatapi.com/v1/breeds"; 
+        const API_KEY = "live_GSOwtgTKftjbufFyqEueVUBD23nTnCOUaIRBWZ3nsVjWnb3ec2icOWptSwjwIilU"; 
+        let qrCodes = []; 
+
+        async function fetchBreeds() { 
+            const select = document.getElementById("breedSelect");
+            select.innerHTML = `<option value="">Loading breeds...</option>`;
+
+            try {
+                const response = await fetch(API_URL, { 
+                    headers: { "x-api-key": API_KEY }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`API error: ${response.status}`);
+                }
+
+                const breeds = await response.json();
+
+                select.innerHTML = `<option value="">Select a breed</option>`;
+                breeds.forEach(breed => {
+                    const option = document.createElement("option");
+                    option.value = JSON.stringify({ id: breed.id, name: breed.name, origin: breed.origin });
+                    option.textContent = breed.name;
+                    select.appendChild(option);
+                });
+
+            } catch (error) {
+                console.error("Error fetching breeds:", error);
+                select.innerHTML = `<option value="">⚠️ Failed to load breeds. Try again.</option>`;
+            }
+        }
+
+        function generateQRCode() {
+            const select = document.getElementById("breedSelect");
+            const selectedBreed = select.value;
+
+            if (!selectedBreed) {
+                alert("Please select a cat breed first!");
+                return;
+            }
+
+            const breedInfo = JSON.parse(selectedBreed);
+            createQRCode(breedInfo);
+        }
+
+        function createQRCode(breedInfo) {
+            const qrContainer = document.createElement("div");
+            qrContainer.classList.add("qr-item");
+
+            const qrTitle = document.createElement("h2");
+            qrTitle.textContent = breedInfo.name;
+
+            const qrCode = document.createElement("div");
+
+            new QRCode(qrCode, {
+                text: JSON.stringify(breedInfo),
+                width: 150,
+                height: 150,
+                correctLevel: QRCode.CorrectLevel.H
+            });
+
+            const deleteButton = document.createElement("button");
+            deleteButton.textContent = "Delete";
+            deleteButton.classList.add("delete-btn");
+            deleteButton.onclick = () => qrContainer.remove();
+
+            qrContainer.appendChild(qrTitle);
+            qrContainer.appendChild(qrCode);
+            qrContainer.appendChild(deleteButton);
+            document.getElementById("qrDisplay").appendChild(qrContainer);
+
+            qrCodes.push(qrContainer);
+        }
+
+        function deleteAllQRCodes() {
+            document.getElementById("qrDisplay").innerHTML = "";
+            qrCodes = [];
+        }
+
+        function searchQRCode() {
+    const searchTerm = document.getElementById("searchInput").value.toLowerCase();
+    document.querySelectorAll(".qr-item").forEach(item => {
+        const title = item.querySelector("h2").textContent.toLowerCase();
+        item.style.display = title.includes(searchTerm) || searchTerm === "" ? "block" : "none";
+    });
+}
+
+// Add an event listener for live search update
+document.getElementById("searchInput").addEventListener("input", searchQRCode);
+
+    </script>
+
+</body>
+</html>
